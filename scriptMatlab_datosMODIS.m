@@ -35,12 +35,12 @@ if ~(ficheroMODIS_B1 == 0)
     % Band4: 545 - 565 nm (Green), Band5: 1230 - 1250 nm (1.2), Band6: 1628 - 1652 nm (1.6)
     % Band7: 2105 - 2155 nm (2.1), shortwave: 0.3 - 5.0 um, visible: 0.3 - 0.7 um
     % and near-infrared: 0.7 to 5.0 um (nir)  
-    wvlMODIS = [645, 859, 469, 555, 1240, 1640, 2130];
+    wvlMODIS = [200, 645, 859, 469, 555, 1240, 1640, 2130, 4000];
     % Busca los datos coincidentes temporalmente de AERONET
     version = 2;
     nivel = 15;
     [Albedos] = buscarAlbedosAERONET(fechaAERONET, version, nivel);
-    wvlAERONET = [440, 675, 870, 1020];
+    wvlAERONET = [200, 440, 675, 870, 1020, 4000];
     % Conversion a albedo
     % WSA = fiso + fvol * (0.189184) + fgeo * (-1.377622);     
     % BSA = fiso + ...
@@ -81,25 +81,29 @@ if ~(ficheroMODIS_B1 == 0)
             Albedo(indexSZA, indexBand) = (1 - SKYL_fraction) * newBS_Albedo(indexSZA, indexBand) + SKYL_fraction * newWS_Albedo(indexBand);
         end % for indexBand
     end % for indexSZA
-    AlbedoAERONET = [Albedos.Albedo_440(1), Albedos.Albedo_675(1), ...
-                    Albedos.Albedo_870(1), Albedos.Albedo_1020(1)];
+    AlbedoAERONET = [0, Albedos.Albedo_440(1), Albedos.Albedo_675(1), ...
+                    Albedos.Albedo_870(1), Albedos.Albedo_1020(1), 0];
+    % Albedo at 200 nm and 4000 nm assumed equal to zero, for interpolation
     plot(wvlAERONET, AlbedoAERONET, '-x');
     legend_txt = strcat('AERONET@', char(datetime(datevec(Albedos.Fechas(1)),'Format','HH:mm')));
     hold on;
-    AlbedoMODIS = [Albedo(1, 1), Albedo(1, 2), Albedo(1, 3), ...
-         Albedo(1, 4), Albedo(1, 5), Albedo(1, 6), Albedo(1, 7)];
+    AlbedoMODIS = [0, Albedo(1, 1), Albedo(1, 2), Albedo(1, 3), ...
+         Albedo(1, 4), Albedo(1, 5), Albedo(1, 6), Albedo(1, 7), 0];
     plot(wvlMODIS, AlbedoMODIS, 'o');
     legend_txt = {legend_txt, strcat('MODIS@', char(datetime(datevec(Albedos.Fechas(1)),'Format','HH:mm')))}; 
     for indexSZA = 2:length(Albedos.Fechas)
-        AlbedoAERONET = [Albedos.Albedo_440(indexSZA), ...
+        AlbedoAERONET = [0, Albedos.Albedo_440(indexSZA), ...
             Albedos.Albedo_675(indexSZA), Albedos.Albedo_870(indexSZA), ...
-            Albedos.Albedo_1020(indexSZA)];
+            Albedos.Albedo_1020(indexSZA), 0];
         plot(wvlAERONET, AlbedoAERONET, '-x');
         legend_txt = [legend_txt, char(datetime(datevec(Albedos.Fechas(indexSZA)),'Format','HH:mm'))];
-        AlbedoMODIS = [Albedo(indexSZA, 1), Albedo(indexSZA, 2), ...
+        AlbedoMODIS = [0, Albedo(indexSZA, 1), Albedo(indexSZA, 2), ...
             Albedo(indexSZA, 3), Albedo(indexSZA, 4), Albedo(indexSZA, 5), ...
-            Albedo(indexSZA, 6), Albedo(indexSZA, 7)];
+            Albedo(indexSZA, 6), Albedo(indexSZA, 7), 0];
         plot(wvlMODIS, AlbedoMODIS, 'o');
+        % Interpolate MODIS data into AERONET wavelengths
+        AlbedoAERONET_MODIS = spline(wvlMODIS, AlbedoMODIS, wvlAERONET);
+        plot(wvlAERONET, AlbedoAERONET_MODIS, '*');
         legend_txt = [legend_txt, char(datetime(datevec(Albedos.Fechas(indexSZA)),'Format','HH:mm'))];
     end %for
     hold off;
