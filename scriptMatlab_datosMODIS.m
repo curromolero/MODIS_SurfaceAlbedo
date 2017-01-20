@@ -81,28 +81,53 @@ if ~(ficheroMODIS_B1 == 0)
             Albedo(indexSZA, indexBand) = (1 - SKYL_fraction) * newBS_Albedo(indexSZA, indexBand) + SKYL_fraction * newWS_Albedo(indexBand);
         end % for indexBand
     end % for indexSZA
+    % Ficheros a generar para libRadTran, de 200 a 4000 nm, cada 1 nm
+    wvl_inic = 200;
+    wvl_fin = 4000;
+    wvl_step = 1;
+    datosFichero = zeros(length(wvl_inic:wvl_step:wvl_fin), 2);
+    datosFichero(:, 1) = wvl_inic:wvl_step:wvl_fin;
+    directorioDatos = '\\cendat2\lidar\\Satelites\MODIS\Datos';
+    for indexTime = 1:length(Albedos.Fechas)
+        % Fichero con datos MODIS
+        nombreFicMODIS = sprintf('%s%s%s%s', 'albedo_MODIS_', datestr(Albedos.Fechas(indexTime), 'yyyymmdd'), '_', datestr(Albedos.Fechas(indexTime), 'HHMM'), '.dat');
+        fileID = fopen(fullfile(directorioDatos, nombreFicMODIS),'w');
+        datosFichero(:, 2) = interp1(wvlMODIS, AlbedoMODIS, datosFichero(:, 1));
+        fprintf(fileID,'%6.0f %6.4f\n',datosFichero');
+        fclose(fileID);
+        % Fichero con datos AERONET
+        nombreFicAERONET = sprintf('%s%s%s%s', 'albedo_AERONET_', datestr(Albedos.Fechas(indexTime), 'yyyymmdd'), '_', datestr(Albedos.Fechas(indexTime), 'HHMM'), '.dat'); 
+        fileID = fopen(fullfile(directorioDatos, nombreFicAERONET),'w');
+        datosFichero(:, 2) = interp1(wvlAERONET, AlbedoAERONET, datosFichero(:, 1));
+        fprintf(fileID,'%6.0f %6.4f\n',datosFichero');
+        fclose(fileID);
+    end %for
     AlbedoAERONET = [0, Albedos.Albedo_440(1), Albedos.Albedo_675(1), ...
                     Albedos.Albedo_870(1), Albedos.Albedo_1020(1), 0];
     % Albedo at 200 nm and 4000 nm assumed equal to zero, for interpolation
-    plot(wvlAERONET, AlbedoAERONET, '-x');
+    plot(wvlAERONET, AlbedoAERONET, 'x');
     legend_txt = strcat('AERONET@', char(datetime(datevec(Albedos.Fechas(1)),'Format','HH:mm')));
     hold on;
     AlbedoMODIS = [0, Albedo(1, 1), Albedo(1, 2), Albedo(1, 3), ...
          Albedo(1, 4), Albedo(1, 5), Albedo(1, 6), Albedo(1, 7), 0];
     plot(wvlMODIS, AlbedoMODIS, 'o');
-    legend_txt = {legend_txt, strcat('MODIS@', char(datetime(datevec(Albedos.Fechas(1)),'Format','HH:mm')))}; 
+    legend_txt = {legend_txt, strcat('MODIS@', char(datetime(datevec(Albedos.Fechas(1)),'Format','HH:mm')))};
+    % Interpolate MODIS data into AERONET wavelengths
+    AlbedoAERONET_MODIS = interp1(wvlMODIS, AlbedoMODIS, wvlAERONET);
+    plot(wvlAERONET, AlbedoAERONET_MODIS, '*');
+    legend_txt = [legend_txt, strcat('Interpolate@', char(datetime(datevec(Albedos.Fechas(1)),'Format','HH:mm')))];
     for indexSZA = 2:length(Albedos.Fechas)
         AlbedoAERONET = [0, Albedos.Albedo_440(indexSZA), ...
             Albedos.Albedo_675(indexSZA), Albedos.Albedo_870(indexSZA), ...
             Albedos.Albedo_1020(indexSZA), 0];
-        plot(wvlAERONET, AlbedoAERONET, '-x');
+        plot(wvlAERONET, AlbedoAERONET, 'x');
         legend_txt = [legend_txt, char(datetime(datevec(Albedos.Fechas(indexSZA)),'Format','HH:mm'))];
         AlbedoMODIS = [0, Albedo(indexSZA, 1), Albedo(indexSZA, 2), ...
             Albedo(indexSZA, 3), Albedo(indexSZA, 4), Albedo(indexSZA, 5), ...
             Albedo(indexSZA, 6), Albedo(indexSZA, 7), 0];
         plot(wvlMODIS, AlbedoMODIS, 'o');
         % Interpolate MODIS data into AERONET wavelengths
-        AlbedoAERONET_MODIS = spline(wvlMODIS, AlbedoMODIS, wvlAERONET);
+        AlbedoAERONET_MODIS = interp1(wvlMODIS, AlbedoMODIS, wvlAERONET);
         plot(wvlAERONET, AlbedoAERONET_MODIS, '*');
         legend_txt = [legend_txt, char(datetime(datevec(Albedos.Fechas(indexSZA)),'Format','HH:mm'))];
     end %for
